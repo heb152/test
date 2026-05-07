@@ -6283,7 +6283,7 @@ async function calcOSOWPastDamage(){
   try{
     const resp = await fetch('/api/run',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...data, input_txt})
+      body: JSON.stringify({...data, input_txt, use_pyodide:true})
     });
     const res = await resp.json();
     const fdPast = parseFloat((res.damage?.fatigue||0).toFixed(4));
@@ -8500,7 +8500,7 @@ async function runForThicknessOSOW(thickIn, axle){
     }};
     const input_txt=buildTxt(OSOWData);
     const r=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({...OSOWData,input_txt})});
+      body:JSON.stringify({...OSOWData,input_txt,use_pyodide:true})});
     if(!r.ok) return null;
     return await r.json();
   } finally {
@@ -8524,7 +8524,7 @@ async function runForThickness(thickIn){
     const data=getFormData();
     const input_txt=buildTxt(data);
     const r=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({...data,input_txt})});
+      body:JSON.stringify({...data,input_txt,use_pyodide:true})});
     if(!r.ok) return null;
     return await r.json();
   } finally {
@@ -8885,10 +8885,11 @@ async function runThicknessOpt(){
     const fdPast_opt = parseFloat(_gv('OSOWFDpast'))||0;
     const rdPast_opt = parseFloat(_gv('OSOWRDpast'))||0;
 
-    // Correct allowable: remaining pavement life = 1 - past damage
-    // Total (conv + OSOW) must not exceed this allowable
-    const fdAllow_opt = Math.max(0.001, 1 - (fdPast_opt||0));
-    const rdAllow_opt = Math.max(0.001, 1 - (rdPast_opt||0));
+    // Task 3 Additional Bituminous method:
+    // Find min h where conv(h)+OSOW(h) ≤ conv(origH) for both FD and RD
+    // i.e. adding OSOW doesn't increase damage beyond what conv alone caused at design thickness
+    const fdAllow_opt = Math.max(0.001, convDamage.fatigue||0);
+    const rdAllow_opt = Math.max(0.001, convDamage.rutting||0);
     const critESAL = curESAL;
     const govMode = 'Task3';
 
