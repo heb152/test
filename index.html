@@ -826,7 +826,7 @@ body #OSOWGVWVal { color:#ffffff !important; -webkit-text-fill-color:#ffffff !im
             <div class="fld"><label>pᵦ — Binder wt% <span style="color:var(--acc);font-size:9px">✎</span></label>
               <input id="mp_P2" type="number" value="5" step="0.1" min="0" max="100" oninput="if(!clampPct(this))return;calcVbeff()" style="font-size:12px"></div>
             <div class="fld"><label>Vₐ — Air Voids % <span style="color:var(--acc);font-size:9px">✎</span></label>
-              <input id="mp_Va" type="number" value="6" step="0.1" min="0" max="100" oninput="if(!clampPct(this))return;calcVbeff()" style="font-size:12px"></div>
+              <input id="mp_Va" type="number" value="6" step="0.1" min="0" max="100" oninput="if(!clampPct(this))return;calcVbeff();updateCalibDisplay();" style="font-size:12px"></div>
             <div class="fld"><label>P_ba — Absorption % <span style="color:var(--acc);font-size:9px">✎</span></label>
               <input id="mp_Pba" type="number" value="1" step="0.1" min="0" max="100" oninput="if(!clampPct(this))return;calcVbeff()" style="font-size:12px"></div>
             <div class="fld"><label>G_b — Binder Sp.Gr. <span style="color:var(--acc);font-size:9px">✎</span></label>
@@ -834,7 +834,7 @@ body #OSOWGVWVal { color:#ffffff !important; -webkit-text-fill-color:#ffffff !im
             <div class="fld"><label>G_sb — Agg Sp.Gr. <span style="color:var(--acc);font-size:9px">✎</span></label>
               <input id="mp_Gsb" type="number" value="2.65" step="0.01" oninput="calcVbeff()" style="font-size:12px"></div>
             <div class="fld"><label>Air voids @ bottom % <span style="color:var(--acc);font-size:9px">✎</span></label>
-              <input id="mp_Va_bot" type="number" value="8" step="0.1" min="0" max="100" oninput="clampPct(this)" style="font-size:12px"></div>
+              <input id="mp_Va_bot" type="number" value="8" step="0.1" min="0" max="100" oninput="clampPct(this);updateCalibDisplay();" style="font-size:12px"></div>
             <!-- LOCKED: calculated from inputs above -->
             <div class="fld"><label>Vbeff <span style="font-size:9px;color:var(--mu)">(calc from pᵦ,Gᵦ,Gsb,Pba)</span></label>
               <input id="mp_Vbeff" type="number" value="9.37" step="0.1" readonly
@@ -860,6 +860,29 @@ body #OSOWGVWVal { color:#ffffff !important; -webkit-text-fill-color:#ffffff !im
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn sm pr" onclick="applyMixProps()">↻ Recalculate E for All Seasons</button>
             <button class="btn sm" onclick="restoreDefaults()">⟳ Restore Defaults</button>
+          </div>
+
+          <!-- MnPAVE Calibration Factors Display -->
+          <div id="mnpaveCalibDisplay" style="margin-top:12px;background:var(--sf2);border:1px solid var(--brd);border-radius:8px;padding:12px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--acc);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MnPAVE Calibration Factors</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="background:var(--sf);border:1px solid var(--brd);border-radius:6px;padding:10px;text-align:center">
+                <div style="font-size:10px;color:var(--mu);margin-bottom:4px">C<sub>R</sub> = 10<sup>CR<sub>poly</sub></sup></div>
+                <div id="dispCRpoly" style="font-size:10px;color:var(--mu);margin-bottom:2px">CR<sub>poly</sub> = 0.143</div>
+                <div id="dispCR" style="font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:700;color:var(--acc)">1.39</div>
+                <div style="font-size:10px;color:var(--mu)">Rutting calibration</div>
+              </div>
+              <div style="background:var(--sf);border:1px solid var(--brd);border-radius:6px;padding:10px;text-align:center">
+                <div style="font-size:10px;color:var(--mu);margin-bottom:4px">C<sub>F</sub> = 10<sup>M+CF<sub>poly</sub></sup></div>
+                <div id="dispCFpoly" style="font-size:10px;color:var(--mu);margin-bottom:2px">CF<sub>poly</sub> = 0.139</div>
+                <div id="dispCF" style="font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:700;color:var(--acc)">0.433</div>
+                <div style="font-size:10px;color:var(--mu)">Fatigue calibration</div>
+              </div>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:var(--mu);line-height:1.5">
+              M = C<sub>F1</sub>(V<sub>b</sub>/(V<sub>a</sub>+V<sub>b</sub>) + C<sub>F2</sub>),  C<sub>F1</sub>=4.84, C<sub>F2</sub>=−0.69
+              &nbsp;|&nbsp; V<sub>a</sub>(bot)=<span id="dispVa">8.0</span>%,  V<sub>b</sub>=<span id="dispVb">11.31</span>% <span style="color:var(--mu)">(calc from Pᵦ,Gᵦ,Gsb,Vₐ)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -2749,7 +2772,7 @@ const SUBTYPES={
     subtypes:[
       // MnDOT
       {label:'Gravel (MnDOT)',      E:{Fall:16.1,Winter:50,Early_Spring:50,Late_Spring:12.73,Summer:8.97}},
-      {label:'Sand (MnDOT)',        E:{Fall:16.1,Winter:50,Early_Spring:50,Late_Spring:12.73,Summer:8.97}},
+      {label:'Sand (MnDOT)',        E:{Fall:16.1,Winter:50,Early_Spring:50,Late_Spring:12.73,Summer:15.46}},
       {label:'Loamy Sand (MnDOT)',  E:{Fall:13.06,Winter:50,Early_Spring:50,Late_Spring:9.78,Summer:11.88}},
       {label:'Sandy Loam (MnDOT)',  E:{Fall:11.92,Winter:50,Early_Spring:50,Late_Spring:8.43,Summer:10.23}},
       {label:'Loam (MnDOT)',        E:{Fall:10.16,Winter:50,Early_Spring:50,Late_Spring:6.97,Summer:8.47}},
@@ -2792,45 +2815,45 @@ const SUBTYPES={
   },
   'Undisturbed Soil':{
     subtypes:[
-      {label:'Gravel (MnDOT)',      E:{Fall:6.5,Winter:50,Early_Spring:50,Late_Spring:4.5,Summer:5.5}},
-      {label:'Sand (MnDOT)',        E:{Fall:6,Winter:50,Early_Spring:50,Late_Spring:4,Summer:5}},
-      {label:'Loamy Sand (MnDOT)',  E:{Fall:5.551,Winter:50,Early_Spring:50,Late_Spring:3.886,Summer:4.719}},
-      {label:'Sandy Loam (MnDOT)',  E:{Fall:5.2,Winter:50,Early_Spring:50,Late_Spring:3.6,Summer:4.4}},
-      {label:'Loam (MnDOT)',        E:{Fall:4.8,Winter:50,Early_Spring:50,Late_Spring:3.3,Summer:4}},
-      {label:'Silt Loam (MnDOT)',   E:{Fall:4.5,Winter:50,Early_Spring:50,Late_Spring:3,Summer:3.8}},
-      {label:'Silt (MnDOT)',        E:{Fall:4.2,Winter:50,Early_Spring:50,Late_Spring:2.8,Summer:3.5}},
-      {label:'Sandy Clay Loam (MnDOT)',E:{Fall:5,Winter:50,Early_Spring:50,Late_Spring:3.5,Summer:4.2}},
+      {label:'Gravel (MnDOT)',      E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:7.388,Summer:8.971}},
+      {label:'Sand (MnDOT)',        E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:7.388,Summer:8.971}},
+      {label:'Loamy Sand (MnDOT)',  E:{Fall:7.58,Winter:50,Early_Spring:50,Late_Spring:5.677,Summer:6.894}},
+      {label:'Sandy Loam (MnDOT)',  E:{Fall:6.918,Winter:50,Early_Spring:50,Late_Spring:4.89,Summer:5.94}},
+      {label:'Loam (MnDOT)',        E:{Fall:5.898,Winter:50,Early_Spring:50,Late_Spring:4.046,Summer:4.913}},
+      {label:'Silt Loam (MnDOT)',   E:{Fall:6.386,Winter:50,Early_Spring:50,Late_Spring:4.113,Summer:4.994}},
+      {label:'Silt (MnDOT)',        E:{Fall:5.978,Winter:50,Early_Spring:50,Late_Spring:3.85,Summer:4.675}},
+      {label:'Sandy Clay Loam (MnDOT)',E:{Fall:6.25,Winter:50,Early_Spring:50,Late_Spring:4.375,Summer:5.312}},
       {label:'Clay Loam (MnDOT)',   E:{Fall:5.551,Winter:50,Early_Spring:50,Late_Spring:3.886,Summer:4.719}},
-      {label:'Silty Clay Loam (MnDOT)',E:{Fall:4.8,Winter:50,Early_Spring:50,Late_Spring:3.2,Summer:4}},
-      {label:'Sandy Clay (MnDOT)',  E:{Fall:4.5,Winter:50,Early_Spring:50,Late_Spring:3,Summer:3.8}},
-      {label:'Silty Clay (MnDOT)',  E:{Fall:4.2,Winter:50,Early_Spring:50,Late_Spring:2.8,Summer:3.5}},
-      {label:'Clay (MnDOT)',        E:{Fall:3.8,Winter:50,Early_Spring:50,Late_Spring:2.5,Summer:3.2}},
+      {label:'Silty Clay Loam (MnDOT)',E:{Fall:5.277,Winter:50,Early_Spring:50,Late_Spring:3.509,Summer:4.261}},
+      {label:'Sandy Clay (MnDOT)',  E:{Fall:6.415,Winter:50,Early_Spring:50,Late_Spring:4.49,Summer:5.453}},
+      {label:'Silty Clay (MnDOT)',  E:{Fall:5.094,Winter:50,Early_Spring:50,Late_Spring:3.459,Summer:4.2}},
+      {label:'Clay (MnDOT)',        E:{Fall:5.365,Winter:50,Early_Spring:50,Late_Spring:3.718,Summer:4.515}},
       // AASHTO
-      {label:'A-1-a (AASHTO)',E:{Fall:7,Winter:50,Early_Spring:50,Late_Spring:5,Summer:6}},
-      {label:'A-1-b (AASHTO)',E:{Fall:6.5,Winter:50,Early_Spring:50,Late_Spring:4.5,Summer:5.5}},
-      {label:'A-3 (AASHTO)', E:{Fall:6,Winter:50,Early_Spring:50,Late_Spring:4.2,Summer:5.2}},
-      {label:'A-2-4 (AASHTO)',E:{Fall:5.5,Winter:50,Early_Spring:50,Late_Spring:3.8,Summer:4.8}},
-      {label:'A-2-5 (AASHTO)',E:{Fall:5.2,Winter:50,Early_Spring:50,Late_Spring:3.5,Summer:4.5}},
-      {label:'A-2-6 (AASHTO)',E:{Fall:5,Winter:50,Early_Spring:50,Late_Spring:3.3,Summer:4.2}},
-      {label:'A-2-7 (AASHTO)',E:{Fall:4.8,Winter:50,Early_Spring:50,Late_Spring:3.1,Summer:4}},
-      {label:'A-4 (AASHTO)', E:{Fall:4.5,Winter:50,Early_Spring:50,Late_Spring:2.9,Summer:3.8}},
-      {label:'A-5 (AASHTO)', E:{Fall:4.2,Winter:50,Early_Spring:50,Late_Spring:2.7,Summer:3.5}},
-      {label:'A-6 (AASHTO)', E:{Fall:4,Winter:50,Early_Spring:50,Late_Spring:2.5,Summer:3.3}},
-      {label:'A-7-5 (AASHTO)',E:{Fall:3.8,Winter:50,Early_Spring:50,Late_Spring:2.3,Summer:3.1}},
-      {label:'A-7-6 (AASHTO)',E:{Fall:3.5,Winter:50,Early_Spring:50,Late_Spring:2.1,Summer:2.9}},
+      {label:'A-1-a (AASHTO)',E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:7.388,Summer:8.971}},
+      {label:'A-1-b (AASHTO)',E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:7.388,Summer:8.971}},
+      {label:'A-3 (AASHTO)', E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:7.388,Summer:8.971}},
+      {label:'A-2-4 (AASHTO)',E:{Fall:6.918,Winter:50,Early_Spring:50,Late_Spring:5.181,Summer:6.292}},
+      {label:'A-2-5 (AASHTO)',E:{Fall:7.58,Winter:50,Early_Spring:50,Late_Spring:5.677,Summer:6.894}},
+      {label:'A-2-6 (AASHTO)',E:{Fall:6.918,Winter:50,Early_Spring:50,Late_Spring:5.181,Summer:6.292}},
+      {label:'A-2-7 (AASHTO)',E:{Fall:7.58,Winter:50,Early_Spring:50,Late_Spring:5.677,Summer:6.894}},
+      {label:'A-4 (AASHTO)', E:{Fall:5.898,Winter:50,Early_Spring:50,Late_Spring:3.798,Summer:4.612}},
+      {label:'A-5 (AASHTO)', E:{Fall:5.898,Winter:50,Early_Spring:50,Late_Spring:3.798,Summer:4.612}},
+      {label:'A-6 (AASHTO)', E:{Fall:5.898,Winter:50,Early_Spring:50,Late_Spring:4.129,Summer:5.013}},
+      {label:'A-7-5 (AASHTO)',E:{Fall:5.365,Winter:50,Early_Spring:50,Late_Spring:3.643,Summer:4.423}},
+      {label:'A-7-6 (AASHTO)',E:{Fall:5.551,Winter:50,Early_Spring:50,Late_Spring:3.77,Summer:4.577}},
       // Unified
-      {label:'GW (Unified)', E:{Fall:7,Winter:50,Early_Spring:50,Late_Spring:5,Summer:6}},
-      {label:'GP (Unified)', E:{Fall:6.5,Winter:50,Early_Spring:50,Late_Spring:4.5,Summer:5.5}},
-      {label:'GM (Unified)', E:{Fall:6,Winter:50,Early_Spring:50,Late_Spring:4.2,Summer:5.2}},
-      {label:'GC (Unified)', E:{Fall:5,Winter:50,Early_Spring:50,Late_Spring:3.4,Summer:4.3}},
-      {label:'SW (Unified)', E:{Fall:5.5,Winter:50,Early_Spring:50,Late_Spring:3.8,Summer:4.7}},
-      {label:'SP (Unified)', E:{Fall:5,Winter:50,Early_Spring:50,Late_Spring:3.4,Summer:4.3}},
-      {label:'SM (Unified)', E:{Fall:4.8,Winter:50,Early_Spring:50,Late_Spring:3.2,Summer:4.1}},
-      {label:'SC (Unified)', E:{Fall:4.5,Winter:50,Early_Spring:50,Late_Spring:3,Summer:3.8}},
-      {label:'ML (Unified)', E:{Fall:4.2,Winter:50,Early_Spring:50,Late_Spring:2.8,Summer:3.6}},
-      {label:'CL (Unified)', E:{Fall:4,Winter:50,Early_Spring:50,Late_Spring:2.6,Summer:3.4}},
-      {label:'MH (Unified)', E:{Fall:3.8,Winter:50,Early_Spring:50,Late_Spring:2.4,Summer:3.2}},
-      {label:'CH (Unified)', E:{Fall:3.5,Winter:50,Early_Spring:50,Late_Spring:2.1,Summer:2.9}},
+      {label:'GW (Unified)', E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:6.538,Summer:7.939}},
+      {label:'GP (Unified)', E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:6.538,Summer:7.939}},
+      {label:'GM (Unified)', E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:6.538,Summer:7.939}},
+      {label:'GC (Unified)', E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:6.538,Summer:7.939}},
+      {label:'SW (Unified)', E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:7.388,Summer:8.971}},
+      {label:'SP (Unified)', E:{Fall:9.34,Winter:50,Early_Spring:50,Late_Spring:7.388,Summer:8.971}},
+      {label:'SM (Unified)', E:{Fall:6.918,Winter:50,Early_Spring:50,Late_Spring:4.891,Summer:5.939}},
+      {label:'SC (Unified)', E:{Fall:6.918,Winter:50,Early_Spring:50,Late_Spring:4.891,Summer:5.939}},
+      {label:'ML (Unified)', E:{Fall:6.386,Winter:50,Early_Spring:50,Late_Spring:4.113,Summer:4.994}},
+      {label:'CL (Unified)', E:{Fall:5.094,Winter:50,Early_Spring:50,Late_Spring:3.459,Summer:4.2}},
+      {label:'MH (Unified)', E:{Fall:6.386,Winter:50,Early_Spring:50,Late_Spring:4.113,Summer:4.994}},
+      {label:'CH (Unified)', E:{Fall:5.094,Winter:50,Early_Spring:50,Late_Spring:3.459,Summer:4.2}},
     ],
     default:'Clay Loam (MnDOT)'
   }
@@ -4176,8 +4199,8 @@ function applyMixProps(){
   try{sessionStorage.setItem('_mixProps',JSON.stringify(window._mixProps));sessionStorage.setItem('_vbeffUserSet',String(window._vbeffUserSet));}catch(e){}
   // Sync ALL inputs → _mixProps central store
   // Try each ID; whichever is in DOM at this moment wins
-  const ids = ['mp_p200','mp_p4','mp_p38','mp_p34','mp_Va','mp_Vbeff','mp_f'];
-  const keys= ['p200',   'p4',   'p38',   'p34',   'Va',   'Vbeff',   'f'  ];
+  const ids = ['mp_p200','mp_p4','mp_p38','mp_p34','mp_Va','mp_Vbeff','mp_f','mp_Va_bot'];
+  const keys= ['p200',   'p4',   'p38',   'p34',   'Va',   'Vbeff',   'f',  'Va_bot'  ];
   ids.forEach((id,i)=>{
     const v=parseFloat(_gv(id));
     if(!isNaN(v)) window._mixProps[keys[i]]=v;
@@ -4192,6 +4215,7 @@ function applyMixProps(){
   const mf=_gv('mp_f');if(mf){_sv('mixFreq',mf);}
   updHMA();
   updMatlists();
+  updateCalibDisplay();
 }
 
 function calcVbeff(){
@@ -4200,10 +4224,12 @@ function calcVbeff(){
     const Pba= parseFloat(_gv('mp_Pba'))||1;
     const Gb = parseFloat(_gv('mp_Gb'))||1.02;
     const Gsb= parseFloat(_gv('mp_Gsb'))||2.65;
+    const Va = parseFloat(_gv('mp_Va'));
 
     // Store inputs in _mixProps
     window._mixProps.P2=P2; window._mixProps.Pba=Pba;
     window._mixProps.Gb=Gb; window._mixProps.Gsb=Gsb;
+    if(!isNaN(Va)) window._mixProps.Va=Va;
 
     // Witczak/NCHRP 1-37A Vbeff formula (% by volume):
     // Pb_eff = effective binder content by weight
@@ -4283,20 +4309,85 @@ function restoreDefaults(){
 //  VISCOSITY TABLE (compact, in structure panel)
 // ═══════════════════════════════════════════════════════
 const _BINDER_DB={
-  'PG52-34':{A:12.85,   VTS:-4.4089},
-  'PG58-28':{A:12.787,  VTS:-4.3719},
-  'PG58-34':{A:10.61,   VTS:-3.5888},
-  'PG58-40':{A:8.2798,  VTS:-2.738 },
-  'PG64-22':{A:12.82,   VTS:-4.3721},
-  'PG64-28':{A:11.725,  VTS:-3.9763},
-  'PG70-28':{A:9.263,   VTS:-3.0842},
-  'PG70-34':{A:9.618,   VTS:-3.234 },
+  'PG52-34':{A:12.85,   VTS:-4.4089, CRpoly:0,     CFpoly:0    },
+  'PG58-28':{A:12.787,  VTS:-4.3719, CRpoly:0,     CFpoly:0    },
+  'PG58-34':{A:10.61,   VTS:-3.5888, CRpoly:0.143, CFpoly:0.139},
+  'PG58-40':{A:8.2798,  VTS:-2.738,  CRpoly:0.143, CFpoly:0.196},
+  'PG64-22':{A:12.82,   VTS:-4.3721, CRpoly:0,     CFpoly:0    },
+  'PG64-28':{A:11.725,  VTS:-3.9763, CRpoly:0.143, CFpoly:0.061},
+  'PG70-28':{A:9.263,   VTS:-3.0842, CRpoly:0.26,  CFpoly:0.26 },
+  'PG70-34':{A:9.618,   VTS:-3.234,  CRpoly:0.352, CFpoly:0.352},
 };
+
+// ── MnPAVE Calibration Factor Helpers ───────────────────────────────────────
+// CR = 10^CRpoly  (rutting polymer shift)
+// CF = 10^(M + CFpoly)  where M = CF1*(Vb/(Va+Vb) + CF2), CF1=4.84, CF2=-0.69
+// Va = air voids %, Vb = effective binder content % (Vbeff)
+function _getBinderPoly(grade){
+  const db=_BINDER_DB[grade||'PG58-34'];
+  return db?{CRpoly:db.CRpoly,CFpoly:db.CFpoly}:{CRpoly:0.143,CFpoly:0.139};
+}
+function computeCR(grade){
+  const {CRpoly}=_getBinderPoly(grade);
+  return Math.pow(10, CRpoly);
+}
+function computeCF(grade, Va, Vb){
+  const {CFpoly}=_getBinderPoly(grade);
+  const CF1=4.84, CF2=-0.69;
+  const vaNum=parseFloat(Va)||8, vbNum=parseFloat(Vb)||11.33;
+  const M=CF1*(vbNum/(vaNum+vbNum)+CF2);
+  return Math.pow(10, M+CFpoly);
+}
+function _getCFCR(){
+  // Vb = (Pb/Gb) * Gmm * (1 - Va/100), where Va = in-place air voids (mp_Va)
+  // This matches MnPAVE: "Vb calculated from dynamic modulus input"
+  const grade=(window._liftData&&window._liftData[0]&&window._liftData[0].binder)||'PG58-34';
+  const mp=window._mixProps||{};
+  const Va_bot = mp.Va_bot!=null ? mp.Va_bot : 8;     // air voids @ bottom (for CF formula)
+  const Va_ip  = mp.Va!=null    ? mp.Va    : 6;        // in-place air voids (for Vb calc)
+  const Pb     = mp.P2!=null    ? mp.P2    : 5;        // binder content % by wt of mix
+  const Gb     = mp.Gb!=null    ? mp.Gb    : 1.02;     // binder specific gravity
+  const Gsb    = mp.Gsb!=null   ? mp.Gsb   : 2.65;     // aggregate bulk specific gravity
+  const Gmm    = 100 / (Pb/Gb + (100-Pb)/Gsb);
+  const Gmb    = Gmm * (1 - Va_ip/100);
+  const Vb     = (Pb/Gb) * Gmb;
+  return {cf:computeCF(grade,Va_bot,Vb), CR:computeCR(grade), grade, Va:Va_bot, Vb};
+}
+// ────────────────────────────────────────────────────────────────────────────
+// ── Update MnPAVE Calibration Factors display in HMA modal ──────────────────
+function updateCalibDisplay(){
+  const grade=(window._liftData&&window._liftData[0]&&window._liftData[0].binder)||_gv('binderGrade')||'PG58-34';
+  const mp=window._mixProps||{};
+  const Va_bot = mp.Va_bot!=null ? mp.Va_bot : 8;
+  const Va_ip  = mp.Va!=null    ? mp.Va    : 6;
+  const Pb     = mp.P2!=null    ? mp.P2    : 5;
+  const Gb     = mp.Gb!=null    ? mp.Gb    : 1.02;
+  const Gsb    = mp.Gsb!=null   ? mp.Gsb   : 2.65;
+  const Gmm    = 100 / (Pb/Gb + (100-Pb)/Gsb);
+  const Gmb    = Gmm * (1 - Va_ip/100);
+  const Vb     = (Pb/Gb) * Gmb;
+  const db=_BINDER_DB[grade]||_BINDER_DB['PG58-34'];
+  const CRpoly=db.CRpoly, CFpoly=db.CFpoly;
+  const CR=Math.pow(10,CRpoly);
+  const CF1=4.84, CF2=-0.69;
+  const M=CF1*(Vb/(Va_bot+Vb)+CF2);
+  const CF=Math.pow(10,M+CFpoly);
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('dispCRpoly',`CRpoly = ${CRpoly.toFixed(3)}`);
+  set('dispCR', CR.toFixed(3));
+  set('dispCFpoly',`CFpoly = ${CFpoly.toFixed(3)}`);
+  set('dispCF', CF.toFixed(3));
+  set('dispVa', Va_bot.toFixed(1));
+  set('dispVb', Vb.toFixed(2));
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 function onBinderGradeChange(){
   const grade=_gv('binderGrade');
   if(grade==='custom') return;
   const db=_BINDER_DB[grade];
   if(db){_sv('viscA',db.A);_sv('viscVTS',db.VTS);updHMA();}
+  updateCalibDisplay();
 }
 function updViscTable(){
   const tb=document.getElementById('viscTable');if(!tb)return;
@@ -4385,6 +4476,7 @@ function openHMAModal(){
     });
   });
   updWitczakResultTable();
+  updateCalibDisplay();
   document.getElementById('hmaModalOverlay').classList.add('open');
 }
 
@@ -4883,7 +4975,7 @@ function showFatigue(){
   const hmaE=data.structure.hma_seasonal;
   const le=parseFloat(_gv('lt'))||0.375;
   const leReps=le*1e6;
-  const cf=0.433,kf1=1.2,kf2=-3.291,kf3=-0.854;
+  const {cf,CR:_CR_fat}=_getCFCR();const kf1=1.2,kf2=-3.291,kf3=-0.854;
   let totalD=0;
   const seasonDmg=SD.map((s,si)=>{
     const rows=si<systems.length?parseStrains(systems[si]):[];
@@ -4930,7 +5022,7 @@ function showRutting(){
   const climate=data.climate.seasons;
   const le=parseFloat(_gv('lt'))||0.375;
   const leReps=le*1e6;
-  const CR=1.39,KR1=0.0261,KR2=-2.35;
+  const {CR,cf:_cf_rut}=_getCFCR();const KR1=0.0261,KR2=-2.35;
   let totalD=0;
   const seasonDmg=SD.map((s,si)=>{
     const rows=si<systems.length?parseStrains(systems[si]):[];
@@ -6251,8 +6343,8 @@ async function runOSOWAnalysis(){
     const climate=formData.climate.seasons;
     const hmaE=formData.structure.hma_seasonal;
 
-    const cf=0.433,kf1=1.2,kf2=-3.291,kf3=-0.854;
-    const CR=1.39,KR1=0.0261,KR2=-2.35;
+    const {cf,CR}=_getCFCR();const kf1=1.2,kf2=-3.291,kf3=-0.854;
+    const KR1=0.0261,KR2=-2.35;
 
     const axleResults=[];
 
@@ -8460,8 +8552,8 @@ async function runForThickness(thickIn){
 // ── helper: calc OSOW damage given strains & reps ───────────────────────────
 function calcOSOWDamageFromStrains(strains, totalReps, hmaEMap, climateSeas, shoulder){
   let fd=0,rd=0;
-  const cf=0.433,kf1=1.2,kf2=-3.291,kf3=-0.854;
-  const CR=1.39,KR1=0.0261,KR2=-2.35;
+  const {cf,CR}=_getCFCR();const kf1=1.2,kf2=-3.291,kf3=-0.854;
+  const KR1=0.0261,KR2=-2.35;
   SD.forEach((s,si)=>{
     const ak=SA[si];
     const days=parseFloat(climateSeas[ak]?.days)||90;
@@ -8837,8 +8929,8 @@ async function runThicknessOpt(){
 
     // ── Per methodology (Wilde 2014): OSOW damage re-computed at each h ────────
     // constants (same as main OSOW analysis)
-    const _cf=0.433, _kf1=1.2, _kf2=-3.291, _kf3=-0.854;
-    const _CR=1.39, _KR1=0.0261, _KR2=-2.35;
+    const {cf:_cf,CR:_CR}=_getCFCR();const _kf1=1.2, _kf2=-3.291, _kf3=-0.854;
+    const _KR1=0.0261, _KR2=-2.35;
     const _AE=0.8838;
     const _shoulder=_gv('OSOWShoulder')||'paved';
 
@@ -8846,8 +8938,8 @@ async function runThicknessOpt(){
       // Recompute OSOW damage at given thickness using same logic as runOSOWAnalysis
       const _totalReps = Math.round(tripsToWeekly(parseFloat(_gv('OSOWTrips'))||10) * 52 * (parseInt(_gv('OSOWPeriod'))||20));
       const _climate   = getFormData().climate.seasons;
-      const cf=0.433,kf1=1.2,kf2=-3.291,kf3=-0.854;
-      const CR=1.39,KR1=0.0261,KR2=-2.35;
+      const {cf,CR}=_getCFCR();const kf1=1.2,kf2=-3.291,kf3=-0.854;
+      const KR1=0.0261,KR2=-2.35;
 
       // HMA moduli at this thickness
       const hmaE_h={};
@@ -9352,8 +9444,8 @@ async function runAxleLoadRatio(){
     const hmaE=formData.structure.hma_seasonal;
     const le=parseFloat(_gv('lt'))||0.375;
     const leReps=le*1e6;
-    const cf=0.433, kf1=1.2, kf2=-3.291, kf3=-0.854;
-    const CR=1.39, KR1=0.0261, KR2=-2.35;
+    const {cf,CR}=_getCFCR();const kf1=1.2,kf2=-3.291,kf3=-0.854;
+    const KR1=0.0261,KR2=-2.35;
 
     const results=[];
     let baseFD=null, baseRD=null;
@@ -12785,8 +12877,8 @@ async function runCmpVehicles(){
     const bAxles=_cmpBAxles.map((ax,i)=>({name:i===0?'B-Steer':`B-Unit${i+1}`,...ax}));
     let bGVW=bAxles.reduce((s,a)=>s+a.load,0);
 
-    const cf=0.433,kf1=1.2,kf2=-3.291,kf3=-0.854;
-    const CR=1.39,KR1=0.0261,KR2=-2.35;
+    const {cf,CR}=_getCFCR();const kf1=1.2,kf2=-3.291,kf3=-0.854;
+    const KR1=0.0261,KR2=-2.35;
 
     let bCombFD=0, bCombRD=0;
     const bAxleResults=[];
@@ -13169,8 +13261,8 @@ async function runMissionAnalysis(){
     const fdAllow=Math.max(0,1-(parseFloat(_gv('OSOWFDpast'))||0));
     const rdAllow=Math.max(0,1-(parseFloat(_gv('OSOWRDpast'))||0));
 
-    const cf=0.433,kf1=1.2,kf2=-3.291,kf3=-0.854;
-    const CR=1.39,KR1=0.0261,KR2=-2.35;
+    const {cf,CR}=_getCFCR();const kf1=1.2,kf2=-3.291,kf3=-0.854;
+    const KR1=0.0261,KR2=-2.35;
 
     // helper: run MnLayer for one set of axles with given totalReps
     async function runAxles(axles, totalReps){
@@ -13430,7 +13522,7 @@ async function runMissionAnalysis(){
     // OSOW damage at thickness h — recalculates modulus like OSOWDamageAtH in runThicknessOpt
     async function OSOWDamageAtH_msn(h, axleList, totalReps){
       const _climate=getFormData().climate.seasons;
-      const cf=0.433,kf1=1.2,kf2=-3.291,kf3=-0.854,CR=1.39,KR1=0.0261,KR2=-2.35;
+      const {cf,CR}=_getCFCR();const kf1=1.2,kf2=-3.291,kf3=-0.854,KR1=0.0261,KR2=-2.35;
       const _sh=_gv('OSOWShoulder')||'paved';
       const hmaE_h={};
       SK.forEach(sk=>{
@@ -14783,6 +14875,499 @@ function _p3FrontTex(ctx,pat,x,y,w,h,r,g,b,rng){
 
 // Draw on first load
 window.addEventListener('DOMContentLoaded',()=>setTimeout(draw3DPavement,300));
+</script>
+
+<!-- ═══════════════ JARVIS VOICE ASSISTANT ═══════════════ -->
+<style>
+#va-orb{position:fixed;bottom:28px;left:28px;z-index:9000;width:62px;height:62px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#1a4ab0,#003594 60%,#001f6b);border:2px solid rgba(100,160,255,.4);cursor:pointer;box-shadow:0 0 0 0 rgba(0,53,148,.5),0 6px 20px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:1.5rem;transition:all .3s;user-select:none}
+#va-orb:hover{transform:scale(1.06)}
+#va-orb.sl{background:radial-gradient(circle at 35% 35%,#e53e3e,#c53030 60%,#7b0000);animation:vp 1s ease-in-out infinite}
+#va-orb.st{background:radial-gradient(circle at 35% 35%,#d69e2e,#b7791f 60%,#744210);animation:vp 1.2s ease-in-out infinite}
+#va-orb.ss{background:radial-gradient(circle at 35% 35%,#38a169,#276749 60%,#1a4731);animation:vp .8s ease-in-out infinite}
+@keyframes vp{0%,100%{box-shadow:0 0 0 0 rgba(0,53,148,.5),0 6px 20px rgba(0,0,0,.35)}50%{box-shadow:0 0 0 16px rgba(0,53,148,.0),0 6px 20px rgba(0,0,0,.35)}}
+
+#va-panel{position:fixed;bottom:102px;left:28px;z-index:8999;width:350px;background:#0d1117;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 0 1px rgba(100,160,255,.15);display:none;flex-direction:column;overflow:hidden;font-family:'Inter',sans-serif}
+#va-panel.open{display:flex}
+#va-hd{background:linear-gradient(135deg,#003594,#0a2060);padding:13px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(100,160,255,.12)}
+#va-hd-ttl{color:#fff;font-weight:700;font-size:.9rem;flex:1}
+#va-hd-sub{color:rgba(255,255,255,.5);font-size:.7rem;margin-top:1px}
+#va-hd-x{background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.7);border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
+#va-hd-x:hover{background:rgba(255,255,255,.2)}
+
+#va-wave{height:44px;background:#080c12;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 18px;border-bottom:1px solid rgba(255,255,255,.05)}
+.vb{width:3px;border-radius:2px;background:rgba(100,160,255,.2);transition:height .08s}
+#va-panel.sl .vb{background:#e53e3e;animation:vd .5s ease-in-out infinite}
+#va-panel.st .vb{background:#d69e2e;animation:vd .9s ease-in-out infinite}
+#va-panel.ss .vb{background:#38a169;animation:vd .6s ease-in-out infinite}
+@keyframes vd{0%,100%{height:3px}50%{height:24px}}
+.vb:nth-child(1){height:5px}.vb:nth-child(2){height:12px;animation-delay:.07s}.vb:nth-child(3){height:20px;animation-delay:.14s}.vb:nth-child(4){height:26px;animation-delay:.21s}.vb:nth-child(5){height:18px;animation-delay:.28s}.vb:nth-child(6){height:22px;animation-delay:.21s}.vb:nth-child(7){height:14px;animation-delay:.14s}.vb:nth-child(8){height:8px;animation-delay:.07s}.vb:nth-child(9){height:4px}
+
+#va-chat{max-height:220px;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:7px;background:#0d1117;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
+.vm{max-width:90%;padding:8px 12px;border-radius:13px;font-size:.82rem;line-height:1.5;animation:vfp .18s ease}
+@keyframes vfp{from{opacity:0;transform:translateY(4px)}}
+.vm.bot{background:linear-gradient(135deg,#003594,#0a2060);color:#e8f0ff;border-bottom-left-radius:3px;align-self:flex-start;border:1px solid rgba(100,160,255,.18)}
+.vm.user{background:#1e2530;color:#e2e8f0;border-bottom-right-radius:3px;align-self:flex-end;border:1px solid rgba(255,255,255,.07)}
+.vm.act{background:#0d2b1e;color:#68d391;border:1px solid rgba(56,161,105,.25);align-self:flex-start;font-size:.75rem;font-family:'JetBrains Mono',monospace}
+
+#va-st{padding:7px 14px;font-size:.7rem;color:rgba(255,255,255,.38);background:#080c12;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:5px;min-height:28px}
+#va-dot{width:6px;height:6px;border-radius:50%;background:#444;flex-shrink:0;transition:.3s}
+#va-panel.sl #va-dot{background:#e53e3e;animation:db .7s infinite}
+#va-panel.st #va-dot{background:#d69e2e;animation:db .9s infinite}
+#va-panel.ss #va-dot{background:#38a169;animation:db .5s infinite}
+@keyframes db{0%,100%{opacity:1}50%{opacity:.2}}
+
+#va-mbtn{width:100%;padding:11px;background:linear-gradient(135deg,#003594,#1a4ab0);color:#fff;border:none;font-size:.875rem;font-weight:700;cursor:pointer;letter-spacing:.03em;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+#va-mbtn:hover{filter:brightness(1.1)}
+#va-mbtn.on{background:linear-gradient(135deg,#c53030,#9b2c2c)}
+</style>
+
+<button id="va-orb" onclick="vaToggle()" title="JARVIS Voice Assistant">🤖</button>
+<div id="va-panel">
+  <div id="va-hd">
+    <div style="width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#60a5fa,#003594);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.9rem">🤖</div>
+    <div style="flex:1"><div id="va-hd-ttl">J.A.R.V.I.S.</div><div id="va-hd-sub">OSOW Pavement Voice Assistant</div></div>
+    <button id="va-hd-x" onclick="vaToggle()">×</button>
+  </div>
+  <div id="va-wave">
+    <div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div>
+    <div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div>
+  </div>
+  <div id="va-chat"></div>
+  <div id="va-st"><span id="va-dot"></span><span id="va-stxt">Ready</span></div>
+  <button id="va-mbtn" onclick="vaToggleListen()">🎤 Start Listening</button>
+  <div style="padding:8px 12px;background:#080c12;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:6px">
+    <input id="va-apikey" type="password" placeholder="Paste Groq API key here…"
+      style="flex:1;background:#1a1f2e;border:1px solid rgba(100,160,255,.2);border-radius:6px;padding:6px 9px;color:#e2e8f0;font-size:.75rem;outline:none;font-family:'JetBrains Mono',monospace"
+      oninput="localStorage.setItem('groq_key',this.value)"
+      title="Get free key at console.groq.com">
+    <a href="https://console.groq.com/keys" target="_blank"
+      style="font-size:.68rem;color:rgba(100,160,255,.7);text-decoration:none;white-space:nowrap;flex-shrink:0">Get key ↗</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SY = window.speechSynthesis;
+  let rec=null, isListening=false, isSpeaking=false, isThinking=false;
+  let panelOpen=false, autoRestart=false, recBusy=false;
+
+  const $=id=>document.getElementById(id);
+  const orb=()=>$('va-orb'), panel=()=>$('va-panel');
+
+  // ── state ──
+  function setState(s){
+    ['sl','st','ss'].forEach(c=>{panel().classList.remove(c);orb().classList.remove(c);});
+    if(s==='listening'){panel().classList.add('sl');orb().classList.add('sl');}
+    else if(s==='thinking'){panel().classList.add('st');orb().classList.add('st');}
+    else if(s==='speaking'){panel().classList.add('ss');orb().classList.add('ss');}
+    orb().textContent = {idle:'🤖',listening:'🔴',thinking:'⚙️',speaking:'🔊'}[s]||'🤖';
+    $('va-stxt').textContent = {idle:'Ready — click mic to start',listening:'Listening… speak freely',thinking:'Understanding…',speaking:'Speaking…'}[s]||'';
+    $('va-mbtn').textContent = s==='listening'?'⏹ Stop Listening':'🎤 Start Listening';
+    $('va-mbtn').classList.toggle('on', s==='listening');
+  }
+
+  // ── chat ──
+  function msg(text,role='bot'){
+    const d=document.createElement('div');
+    d.className='vm '+role; d.textContent=text;
+    $('va-chat').appendChild(d);
+    $('va-chat').scrollTop=99999;
+  }
+
+  // ── speak ──
+  function speak(text,cb){
+    if(SY.speaking) SY.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.rate=1.0; u.pitch=0.9; u.volume=1;
+    const vv=SY.getVoices();
+    const v=vv.find(v=>/google uk|daniel|alex|samantha/i.test(v.name))||vv.find(v=>v.lang==='en-US')||vv[0];
+    if(v) u.voice=v;
+    isSpeaking=true; setState('speaking');
+    u.onend=u.onerror=()=>{
+      isSpeaking=false;
+      if(cb) cb();
+      else if(autoRestart) safeStart();
+      else setState('idle');
+    };
+    SY.speak(u);
+  }
+
+  // ── recognition ──
+  function safeStart(){
+    if(!SR){msg('Speech recognition needs Chrome or Edge.','act');return;}
+    if(isListening||recBusy) return;
+    recBusy=true;
+    rec=new SR();
+    rec.lang='en-US'; rec.continuous=true; rec.interimResults=false;
+    rec.onstart=()=>{isListening=true;recBusy=false;setState('listening');};
+    rec.onend=()=>{
+      isListening=false; recBusy=false;
+      if(autoRestart&&!isSpeaking&&!isThinking) setTimeout(safeStart,350);
+      else setState('idle');
+    };
+    rec.onerror=e=>{if(e.error==='no-speech'||e.error==='aborted') return; msg('⚠ Mic: '+e.error,'act');};
+    rec.onresult=e=>{
+      const t=Array.from(e.results).filter(r=>r.isFinal).map(r=>r[0].transcript).join(' ').trim();
+      if(t) handleText(t);
+    };
+    try{rec.start();}catch(e){recBusy=false;}
+  }
+
+  function stopRec(){
+    autoRestart=false; recBusy=false;
+    if(rec){try{rec.stop();}catch(e){}}
+    isListening=false; setState('idle');
+  }
+
+  // ══════════════════════════════════════════
+  //  INTENT PARSER — understands natural speech
+  // ══════════════════════════════════════════
+  function extractNum(s){
+    const words={'zero':0,'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9,'ten':10,'eleven':11,'twelve':12,'thirteen':13,'fourteen':14,'fifteen':15,'sixteen':16,'seventeen':17,'eighteen':18,'nineteen':19,'twenty':20,'thirty':30,'forty':40,'fifty':50,'sixty':60,'seventy':70,'eighty':80,'ninety':90,'a':1,'an':1,'half':0.5};
+    const m=s.match(/\d+(?:\.\d+)?/); if(m) return parseFloat(m[0]);
+    let tot=0,cur=0;
+    s.toLowerCase().split(/\s+/).forEach(w=>{const n=words[w];if(n!==undefined){cur+=n;}else if(w==='hundred'){cur=cur?cur*100:100;}else if(cur){tot+=cur;cur=0;}});
+    if(cur) tot+=cur;
+    return tot||null;
+  }
+
+  function parseIntent(raw){
+    const t=raw.toLowerCase();
+    const actions=[];
+    const msgs=[];
+
+    // ── TAB NAVIGATION (most important — check first) ──
+    const TABS={
+      project:   ['project','step one','step 1','first tab','first step'],
+      climate:   ['climate','weather','temperature','seasonal','season','step two','step 2'],
+      structure: ['structure','layer','structural','step three','step 3'],
+      traffic:   ['traffic','step four','step 4'],
+      OSOW:      ['osow','over size','oversize','over weight','overweight','vehicle','truck','axle','permit vehicle','step five','step 5'],
+      summary:   ['summary','output summary','step six','step 6','results'],
+      output:    ['detailed result','detailed output','step seven','step 7'],
+      heatmap:   ['heatmap','heat map','heat'],
+      motion:    ['motion','animation','animate'],
+      permit:    ['permit fee','permit cost','fee'],
+      compare:   ['compare'],
+      report:    ['report','export report'],
+      userguide: ['user guide','guide','help','instructions']
+    };
+
+    // Strong tab triggers: "go to X", "open X", "switch to X", "show X", "navigate to X", "select X tab", just saying the tab name
+    const navPattern=/(?:go\s*to|open|switch\s*to|navigate\s*to|show|select|take\s*me\s*to|click)\s+(?:the\s+)?(.+?)(?:\s+tab|\s+step|\s+section|$)/i;
+    const navMatch = raw.match(navPattern);
+    const searchStr = navMatch ? navMatch[1].toLowerCase() : t;
+
+    let foundTab=null;
+    // Check explicit nav match first, then full string
+    for(const [tab,keys] of Object.entries(TABS)){
+      if(keys.some(k=>searchStr.includes(k)||t===k||t===tab)){foundTab=tab;break;}
+    }
+    // Also check if the full utterance IS just a tab name (e.g. user says just "climate" or "structure")
+    if(!foundTab){
+      for(const [tab,keys] of Object.entries(TABS)){
+        if(t.trim()===tab||keys.some(k=>t.trim()===k)){foundTab=tab;break;}
+      }
+    }
+    if(foundTab){
+      actions.push({type:'tab',tab:foundTab});
+      msgs.push('Switching to '+foundTab+' tab.');
+    }
+
+    // ── NEXT / BACK ──
+    if(/\b(next|forward|proceed|continue)\b/i.test(t)&&!/project number/i.test(t)){
+      const all=['project','climate','structure','traffic','OSOW','summary','output'];
+      const cur=document.querySelector('.tab.on')?.dataset?.tab||'project';
+      const i=all.indexOf(cur);
+      if(i>=0&&i<all.length-1){actions.push({type:'tab',tab:all[i+1]});msgs.push('Moving to next step.');}
+    }
+    if(/\b(back|previous|go back|prev)\b/i.test(t)){
+      const all=['project','climate','structure','traffic','OSOW','summary','output'];
+      const cur=document.querySelector('.tab.on')?.dataset?.tab||'project';
+      const i=all.indexOf(cur);
+      if(i>0){actions.push({type:'tab',tab:all[i-1]});msgs.push('Going back.');}
+    }
+
+    // ── SCROLL ──
+    if(/scroll\s*(down|up)/i.test(t)){
+      const d=/down/i.test(t)?300:-300;
+      actions.push({type:'scroll',amount:d});
+      msgs.push('Scrolling '+(d>0?'down':'up')+'.');
+    }
+
+    // ── RUN / CALCULATE ──
+    if(/\b(run|calculat|compute|analyz|execute|start)\b/i.test(t)&&/\b(analysis|calcul|damage|result)\b/i.test(t)){
+      actions.push({type:'run'});
+      msgs.push('Running the analysis.');
+    }
+
+    // ── FIELD SETTERS ──
+
+    // Project number — "project number P-2024-001" / "project is P2024"
+    if(/project\s*(number|num|id|#|no\.?)/i.test(t)){
+      const m=raw.match(/(?:project\s*(?:number|num|id|#|no\.?)?\s*(?:is|=|:)?\s*)([A-Z0-9][\w\-\.]+)/i);
+      if(m){const v=m[1].replace(/\s+/g,'-').toUpperCase();actions.push({type:'field',id:'projNum',val:v});msgs.push('Project number: '+v+'.');}
+    }
+
+    // Engineer name — "engineer is John Smith" / "my name is John"
+    const engM=raw.match(/(?:engineer\s*(?:is|=|:)|my\s+name\s+is|i\s+am|i'm)\s+([A-Z][a-zA-Z\s]+)/i);
+    if(engM){const v=engM[1].trim();actions.push({type:'field',id:'projEng',val:v});msgs.push('Engineer: '+v+'.');}
+
+    // County — "Hennepin county" / "county is Hennepin"
+    const ctyM=raw.match(/([A-Z][a-z]+)\s+county|county\s+(?:is\s+)?([A-Z][a-z]+)/i);
+    if(ctyM){const v=(ctyM[1]||ctyM[2]).trim();actions.push({type:'field',id:'projCounty',val:v});msgs.push('County: '+v+'.');}
+
+    // Route — "route TH-10" / "highway 35" / "TH 10"
+    const rtM=raw.match(/(?:route|highway|hwy|road)?\s*((?:TH|US|I|MN|CR|CSAH|SAP|SP)[\s\-]?\d+)/i);
+    if(rtM){const v=rtM[1].replace(/\s+/g,'-').toUpperCase();actions.push({type:'field',id:'projRoute',val:v});msgs.push('Route: '+v+'.');}
+
+    // District
+    if(/district/i.test(t)){
+      const n=extractNum(t);
+      const dm={1:'1 — Northeast MN',2:'2 — Northwest MN',3:'3 — Central MN',4:'4 — West Central MN',5:'5 — Metro',6:'6 — Southeast MN',7:'7 — Southwest MN',8:'8 — South MN'};
+      if(n&&dm[n]){actions.push({type:'select',id:'projDistrict',val:dm[n]});msgs.push('District '+n+'.');}
+    }
+
+    // Binder grade — "PG 64-22" / "PG64 22" / "binder grade 64 22"
+    const bgM=raw.match(/(?:pg|binder\s*grade)?\s*(\d{2})\s*[-–\s]\s*(\d{2})/i);
+    if(bgM&&/binder|pg|grade/i.test(t)){const v='PG'+bgM[1]+'-'+bgM[2];actions.push({type:'select',id:'binderGrade',val:v});msgs.push('Binder grade: '+v+'.');}
+
+    // HMA thickness
+    if(/\b(hma|asphalt|surface)\s*(thickness|thick|depth)/i.test(t)||((/thickness|inches?/i.test(t))&&!/axle|base|sub/i.test(t))){
+      const n=extractNum(t);
+      if(n){actions.push({type:'hma',val:n});msgs.push('HMA thickness: '+n+' inches.');}
+    }
+
+    // Trips per week
+    if(/trip/i.test(t)||(/ per\s+week/i.test(t)&&!/design/i.test(t))){
+      const n=extractNum(t);
+      if(n){actions.push({type:'field',id:'OSOWTrips',val:String(n),trigger:'calcOSOWReps'});msgs.push('Trips per week: '+n+'.');}
+    }
+
+    // Permit period
+    if(/\bperiod\b/i.test(t)||(/(permit|analysis)\s*(is\s*)?\d/i.test(t))){
+      const n=extractNum(t);
+      if(n){actions.push({type:'field',id:'OSOWPeriod',val:String(n),trigger:'calcOSOWReps'});msgs.push('Permit period: '+n+' years.');}
+    }
+
+    // Pavement age
+    if(/pavement\s*age|\bage\s*(is|=|:)?\s*\d|\d+\s*years?\s*old/i.test(t)&&!/design/i.test(t)){
+      const n=extractNum(t);
+      if(n!=null){actions.push({type:'field',id:'OSOWAge',val:String(n),trigger:'calcOSOWPastDamage'});msgs.push('Pavement age: '+n+'.');}
+    }
+
+    // Design life
+    if(/design\s*(life|lifespan)|service\s*life/i.test(t)){
+      const n=extractNum(t);
+      if(n){actions.push({type:'field',id:'OSOWDesignLife',val:String(n),trigger:'calcOSOWPastDamage'});msgs.push('Design life: '+n+' years.');}
+    }
+
+    // Axle count
+    if(/axle/i.test(t)){
+      const n=extractNum(t);
+      if(n&&n>=2&&n<=13){actions.push({type:'field',id:'OSOWAxleCount',val:String(n),trigger:'buildOSOWAxles'});msgs.push('Axle count: '+n+'.');}
+    }
+
+    // Air voids
+    if(/air\s*void|va\b/i.test(t)){
+      const n=extractNum(t);
+      if(n){actions.push({type:'field',id:'mp_Va',val:String(n),trigger:'calcVbeff'});msgs.push('Air voids: '+n+'%.');}
+    }
+
+    // Binder content
+    if(/binder\s*(content|percent|%)|pb\b/i.test(t)&&!/grade/i.test(t)){
+      const n=extractNum(t);
+      if(n){actions.push({type:'field',id:'mp_P2',val:String(n),trigger:'calcVbeff'});msgs.push('Binder content: '+n+'%.');}
+    }
+
+    const speech = msgs.length ? msgs.join(' ') :
+      "I didn't catch that. Try: go to climate tab, set trips to ten, project number P-2024-001, or binder grade PG 64-22.";
+
+    return {speech, actions};
+  }
+
+  // ── execute actions ──
+  function doActions(actions){
+    actions.forEach(a=>{
+      if(a.type==='tab'){
+        if(typeof switchTab==='function') switchTab(a.tab);
+        msg('→ '+a.tab+' tab','act');
+      }
+      else if(a.type==='scroll'){
+        window.scrollBy({top:a.amount,behavior:'smooth'});
+      }
+      else if(a.type==='run'){
+        const btn=document.querySelector('[onclick*="runFullOSOW"],[onclick*="runOSOW"],[onclick*="calcOSOW"]');
+        if(btn) btn.click();
+      }
+      else if(a.type==='field'){
+        const el=$(a.id); if(!el) return;
+        el.value=a.val;
+        el.dispatchEvent(new Event('input',{bubbles:true}));
+        el.dispatchEvent(new Event('change',{bubbles:true}));
+        if(a.trigger&&typeof window[a.trigger]==='function') window[a.trigger]();
+        msg('✓ '+a.id+' = '+a.val,'act');
+      }
+      else if(a.type==='select'){
+        const el=$(a.id); if(!el) return;
+        const opt=Array.from(el.options).find(o=>o.value===a.val||o.text===a.val||o.value.includes(a.val.split('—')[0].trim())||o.text.includes(a.val.split('—')[0].trim()));
+        if(opt){el.value=opt.value;el.dispatchEvent(new Event('change',{bubbles:true}));msg('✓ '+a.id+' = '+opt.text,'act');}
+        else msg('⚠ option not found: '+a.val,'act');
+      }
+      else if(a.type==='hma'){
+        // Try multiple selectors for HMA thickness
+        const candidates=[
+          document.querySelector('#editLayerRows tr:first-child input[type=number]'),
+          document.querySelector('#liftRows tr:first-child input[type=number]'),
+          document.querySelector('#tab-structure input[type=number]')
+        ].filter(Boolean);
+        if(candidates[0]){
+          candidates[0].value=a.val;
+          candidates[0].dispatchEvent(new Event('input',{bubbles:true}));
+          candidates[0].dispatchEvent(new Event('change',{bubbles:true}));
+        }
+        if(typeof updHMA==='function') setTimeout(updHMA,100);
+        if(typeof draw3DPavement==='function') setTimeout(draw3DPavement,300);
+        msg('✓ HMA = '+a.val+' in','act');
+      }
+    });
+  }
+
+  // ── Groq API call ──
+  async function askGroq(text){
+    const keyEl=$('va-apikey');
+    const key=(keyEl&&keyEl.value.trim())||localStorage.getItem('groq_key')||'';
+    if(!key) return null; // no key → fallback
+
+    const formSnap=(()=>{
+      const g=id=>{const e=document.getElementById(id);return e?e.value:'?';};
+      return `Project:${g('projNum')} Eng:${g('projEng')} County:${g('projCounty')} Route:${g('projRoute')} Trips:${g('OSOWTrips')} Period:${g('OSOWPeriod')} Axles:${g('OSOWAxleCount')} Binder:${g('binderGrade')}`;
+    })();
+
+    const prompt=`You are J.A.R.V.I.S., voice assistant for an OSOW Flexible Pavement Calculator (Minnesota DOT tool).
+Current form: ${formSnap}
+
+User said: "${text}"
+
+Respond with EXACTLY this format (no extra text):
+SPEECH: <1-2 sentence reply, JARVIS style>
+ACTIONS: <JSON array or []>
+
+Available actions:
+- Tab switch: {"t":"tab","v":"climate"} — tabs: project,climate,structure,traffic,OSOW,summary,output,heatmap,motion,permit,compare,report
+- Field set: {"t":"field","id":"FIELD_ID","v":"VALUE"}
+- Select: {"t":"sel","id":"FIELD_ID","v":"VALUE"}
+- Scroll: {"t":"scroll","v":300} (negative=up)
+- Run calc: {"t":"run"}
+- Next/back tab: {"t":"nav","v":"next"} or {"t":"nav","v":"back"}
+
+Field IDs: projNum, projEng, projCounty, projRoute, OSOWTrips, OSOWPeriod, OSOWAge, OSOWDesignLife, OSOWAxleCount, mp_Va, mp_P2
+Select IDs: projDistrict (options: "1 — Northeast MN" through "8 — South MN"), binderGrade (options: PG52-34,PG58-28,PG58-34,PG58-40,PG64-22,PG64-28,PG70-28,PG70-34)
+
+Examples:
+"go to climate tab" → SPEECH: Switching to climate tab, sir. ACTIONS: [{"t":"tab","v":"climate"}]
+"project number P-2024-001" → SPEECH: Project number set. ACTIONS: [{"t":"field","id":"projNum","v":"P-2024-001"}]
+"binder grade PG 64-22" → SPEECH: Binder grade PG64-22 selected. ACTIONS: [{"t":"sel","id":"binderGrade","v":"PG64-22"}]
+"trips 10, period 20 years" → SPEECH: Done. ACTIONS: [{"t":"field","id":"OSOWTrips","v":"10"},{"t":"field","id":"OSOWPeriod","v":"20"}]`;
+
+    try{
+      const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],temperature:0.1,max_tokens:300})
+      });
+      if(!res.ok) return null;
+      const data=await res.json();
+      const raw=(data.choices?.[0]?.message?.content||'').trim();
+      const sm=raw.match(/SPEECH:\s*(.+?)(?=
+ACTIONS:|$)/s);
+      const am=raw.match(/ACTIONS:\s*(\[.*?\])/s);
+      const speech=sm?sm[1].trim():'Done.';
+      let actions=[];
+      if(am){try{actions=JSON.parse(am[1]);}catch(e){}}
+      return {speech,actions};
+    }catch(e){return null;}
+  }
+
+  // ── execute Groq actions ──
+  function doGroqActions(actions){
+    const allTabs=['project','climate','structure','traffic','OSOW','summary','output'];
+    actions.forEach(a=>{
+      if(a.t==='tab'){if(typeof switchTab==='function')switchTab(a.v);msg('→ '+a.v+' tab','act');}
+      else if(a.t==='nav'){
+        const cur=document.querySelector('.tab.on')?.dataset?.tab||'project';
+        const i=allTabs.indexOf(cur);
+        if(a.v==='next'&&i<allTabs.length-1){switchTab(allTabs[i+1]);msg('→ next tab','act');}
+        else if(a.v==='back'&&i>0){switchTab(allTabs[i-1]);msg('→ back','act');}
+      }
+      else if(a.t==='field'){
+        const el=document.getElementById(a.id);if(!el)return;
+        el.value=a.v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));
+        const trigs={OSOWTrips:'calcOSOWReps',OSOWPeriod:'calcOSOWReps',OSOWAge:'calcOSOWPastDamage',OSOWDesignLife:'calcOSOWPastDamage',OSOWAxleCount:'buildOSOWAxles',mp_Va:'calcVbeff',mp_P2:'calcVbeff'};
+        if(trigs[a.id]&&typeof window[trigs[a.id]]==='function')window[trigs[a.id]]();
+        msg('✓ '+a.id+' = '+a.v,'act');
+      }
+      else if(a.t==='sel'){
+        const el=document.getElementById(a.id);if(!el)return;
+        const opt=Array.from(el.options).find(o=>o.value===a.v||o.text===a.v||o.value.toLowerCase().includes(a.v.toLowerCase())||o.text.toLowerCase().includes(a.v.toLowerCase()));
+        if(opt){el.value=opt.value;el.dispatchEvent(new Event('change',{bubbles:true}));msg('✓ '+a.id+' = '+opt.text,'act');}
+      }
+      else if(a.t==='scroll'){window.scrollBy({top:a.v,behavior:'smooth'});}
+      else if(a.t==='run'){const btn=document.querySelector('[onclick*="runFullOSOW"],[onclick*="runOSOW"]');if(btn)btn.click();}
+    });
+    if(typeof draw3DPavement==='function')setTimeout(draw3DPavement,200);
+  }
+
+  // ── handle utterance ──
+  function handleText(text){
+    if(isThinking||isSpeaking) return;
+    msg(text,'user');
+    autoRestart=false;
+    if(rec){try{rec.stop();}catch(e){}}
+    isThinking=true; setState('thinking');
+
+    askGroq(text).then(result=>{
+      if(result){
+        // Groq succeeded
+        doGroqActions(result.actions);
+        isThinking=false;
+        msg(result.speech,'bot');
+        speak(result.speech,()=>{autoRestart=true;safeStart();});
+      } else {
+        // Fallback to offline parser
+        const {speech,actions}=parseIntent(text);
+        doActions(actions);
+        isThinking=false;
+        msg(speech,'bot');
+        speak(speech,()=>{autoRestart=true;safeStart();});
+      }
+    });
+  }
+
+  // ── public ──
+  window.vaToggle=function(){
+    panelOpen=!panelOpen;
+    panel().classList.toggle('open',panelOpen);
+    if(panelOpen){
+      // Restore saved key
+      const saved=localStorage.getItem('groq_key');
+      if(saved&&$('va-apikey')) $('va-apikey').value=saved;
+      if($('va-chat').children.length===0){
+        const w="Good day. I'm J.A.R.V.I.S. Paste your Groq API key below, then click the mic. Say things like: go to climate tab, set trips to ten, or project number P-2024-001.";
+        msg(w,'bot');
+        setTimeout(()=>speak(w),400);
+      }
+    }
+  };
+  window.vaToggleListen=function(){
+    if(isListening){stopRec();}
+    else{autoRestart=true;safeStart();}
+  };
+
+  if(typeof SY!=='undefined') SY.onvoiceschanged=()=>SY.getVoices();
+  setState('idle');
+})();
 </script>
 
 </body>
